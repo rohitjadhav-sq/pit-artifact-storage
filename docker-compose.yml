@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      PORT: '3000'
+      HOST: 0.0.0.0
+      STORAGE_ROOT: /data/artifacts
+      DATABASE_URL: postgres://pit:${POSTGRES_PASSWORD:-pit}@db:5432/pit
+      MAX_UPLOAD_BYTES: '${MAX_UPLOAD_BYTES:-104857600}'
+      CORS_ORIGINS: '${CORS_ORIGINS:-http://localhost:5173}'
+      SSE_KEEPALIVE_MS: '${SSE_KEEPALIVE_MS:-20000}'
+      LOG_LEVEL: '${LOG_LEVEL:-info}'
+    volumes:
+      - artifact_data:/data/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pit}
+      POSTGRES_DB: pit
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pit -d pit']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  artifact_data:
+  db_data:
